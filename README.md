@@ -1,126 +1,58 @@
-# PreMod 多站点版 · Multi-site PreMod
+# PreMod 多站点版（v3.0.0）说明
 
-> Fork of [horselock/ChatGPT-PreMod](https://github.com/horselock/ChatGPT-PreMod). The ChatGPT part is **unchanged 2.4.2**; this fork adds adapters for DeepSeek / Claude / 千问(通义) / 豆包 / Kimi, and a local reply archive panel.
+> English version: [PreMod-README.en.md](PreMod-README.en.md)
 
-**安装 / Install：** [点击安装 PreMod.user.js](https://github.com/system-orb/PreMod/raw/main/PreMod.user.js)（Tampermonkey / Violentmonkey）
+> 本版在原版 **ChatGPT PreMod 2.4.2**（作者 horselock）的基础上，把「处理审核拦截、保住被删/被撤回的回复」的能力扩展到 **DeepSeek、Claude、千问/通义、豆包、Kimi**。ChatGPT 部分的代码原样保留（已用哈希校验确认与上游 2.4.2 完全一致），其它站点为新增适配。
 
-```text
-https://github.com/system-orb/PreMod/raw/main/PreMod.user.js
-```
+- **GitHub 仓库（已发布）**：<https://github.com/system-orb/PreMod>
+- **在线安装 / 自动更新链接**：<https://github.com/system-orb/PreMod/raw/main/PreMod.user.js>
+- 本机文件：`C:\Users\Administrator\Downloads\PreMod.user.js`（原 2.4.2 已备份为 `PreMod.user.js.2.4.2.bak`）
+- 脚本管理器：浏览器里的 Tampermonkey / Violentmonkey 均可（你目前用的是 Edge 里的 Tampermonkey）
+- 安装/更新：打开上面的 GitHub 安装链接 → Tampermonkey 安装页点安装；因为脚本里已写入 `@downloadURL/@updateURL` 指向该仓库，以后会自动从 GitHub 更新。安装后 **刷新目标网站页面** 生效。
 
 ## 各站点功能
 
-| 站点 | 功能 |
-|---|---|
-| **ChatGPT**（chatgpt.com / chat.openai.com） | 原版 ChatGPT PreMod 2.4.2 全部功能：隐藏审核视觉提示、阻止被删回复、本地保存并在历史里恢复（代码逐字未改） |
-| **DeepSeek**（chat.deepseek.com） | 拦截「撤回/替换」：被 `CONTENT_FILTER` 命中的回复不再消失，正文保留并加提示；正常回复自动备份；重开对话自动恢复被拦截消息 |
-| **Claude**（claude.ai） | 自动点 Continue（"This response ended early / Paused"）；旁路捕获每条回复存档；发现回复在会话里消失时提示并提供找回 |
-| **千问 / 通义**（qianwen.com / tongyi.com） | 整段快照式 SSE：新快照不再包含已显示文本时保存旧版；`error_code` 提示 |
-| **豆包**（doubao.com） | 解析 SSE 事件块累积正文；识别 `STREAM_ERROR` 与风控码 `710022002 / 710022004` |
-| **Kimi**（kimi.com） | 解析 Connect-RPC 二进制帧流；`op=set` 覆盖已有文本时保存旧版 |
-| 其他站点 | 通用旁路留痕 + 右下角「PreMod」存档面板（复制 / 导出 / 清空） |
+| 站点 | 功能 | 说明 |
+|---|---|---|
+| **ChatGPT**（chatgpt.com / chat.openai.com） | 原版 PreMod 全部功能 | 隐藏审核视觉提示、阻止被删回复、本地保存并在历史里恢复。代码未改动。 |
+| **DeepSeek**（chat.deepseek.com） | 拦截「撤回」 | DeepSeek 把被拦截回复替换为模板提示并置 `CONTENT_FILTER` 时，脚本把该事件改写为保留正文 + 追加一条警告提示，回复不再消失；正常回复也会自动备份；重新打开对话时自动恢复被拦截的消息。 |
+| **Claude**（claude.ai） | 自动继续 + 留痕 | 出现「This response ended early / Paused when your free usage ran out」时可自动点 **Continue** 继续生成；同时旁路捕获每条回复正文存档；打开会话时若发现某条已存回复不在会话里，会提示并从面板找回。 |
+| **千问 / 通义**（qianwen.com / tongyi.com） | 留痕 + 覆盖告警 | 千问是「整段快照」式 SSE：新版快照不再包含旧文本（被改口/替换）时，自动把旧版存档；`error_code` 也会提示。 |
+| **豆包**（doubao.com） | 留痕 + 风控提示 | 解析 SSE 事件块，累积正文存档；识别 `STREAM_ERROR` 与风控码 `710022002 / 710022004`，并提示已保存回复。 |
+| **Kimi**（kimi.com） | 留痕 | 解析 www.kimi.com 的 Connect-RPC 二进制帧流；`op=set` 覆盖已有文本时把旧版存档；结束后把整段回复存档。 |
+| 其他站点（脚本里未专门适配的） | 通用留痕 | 对聊天类请求做启发式旁路捕获，尽力保存回复正文，供面板找回。 |
 
-## 使用
+> 国内几个站点目前**没有公开确凿证据**证明一定会「先显示后被审核撤回/替换」。脚本的策略是 **旁路留痕 + 检测覆盖**：即使服务端改了内容，你已经看到的那一版也会被本地保存下来，可从面板复制。是否真的发生替换，需要你在真实使用中验证（见下）。
 
-- 正常使用各 AI 网站即可。DeepSeek 无需额外操作；Claude 自动继续生效时页面顶部会出现提示条。
-- Claude / 千问 / 豆包 / Kimi 等站点右下角有「PreMod」悬浮按钮，点开可查看本地存档（每条可复制、删除，可导出 JSON、清空）。
-- Tampermonkey 菜单（点扩展图标 → PreMod）可开关：横幅、DeepSeek 防撤回、Claude 自动继续、本地留痕、打开存档面板。
+## 使用方法
 
-## 限制（诚实说明）
+1. 正常打开/使用各 AI 网站。DeepSeek 无需额外操作；Claude 的自动继续生效后页面顶部会出现 PreMod 提示条。
+2. **右下角有「PreMod」悬浮按钮**的站点（Claude、千问、豆包、Kimi 等）：点开即「本地存档」面板。
+   - 每条记录可 **复制**、**删**；顶部可 **导出** 全部 JSON、**清空**。
+   - 存档只保存在本浏览器的 `localStorage`（每站点独立），不会上传。
+3. 脚本管理器菜单（点 Tampermonkey 图标 → PreMod）里可开关：
+   - `Toggle all banners` / 启动横幅开关（所有站点）
+   - `Toggle DeepSeek 防撤回`（DeepSeek）
+   - `Toggle Claude 自动继续`、`Toggle 本地留痕`（Claude）
+   - `Toggle 本地留痕`、`Show PreMod 存档面板`（千问/豆包/Kimi/其他）
 
-- **无法绕过服务端审核**：只能保住「服务器已经发到浏览器的内容」以及被覆盖前的旧内容留档。
-- 国内站点的网页端「审核提示原文 / 是否先显示后被替换」目前没有公开实证，接口按 2026 年公开逆向资料实现，站点改版可能失效；失效时通常表现为面板无新记录或 Console 出现 `[PreMod:...]` 报错。
-- 存档只保存在本浏览器 `localStorage`，清除站点数据会丢失，重要内容请用面板「导出」。
-- 请遵守各平台服务条款，自行评估使用风险。
+## 重要限制与风险
 
-## 文件
+- **无法绕过服务端审核**：脚本只能保住「服务器已经发给浏览器的内容」，以及把被覆盖前的旧内容留档；不会让被拒绝的请求变合法。
+- **国内站点行为未知项**：Kimi/千问/豆包的网页端「审核提示原文」「是否先显示后替换」暂无公开实证；接口协议按 2026 年公开逆向资料实现，站点改版可能失效。失效时的表现通常是：面板里没有新记录 / 控制台出现 `[PreMod:...]` 报错。
+- **Kimi 帧解析**依赖 www.kimi.com 的 Connect-RPC 协议（`/apiv2/kimi.gateway.chat.v1.ChatService/Chat`）；若改成旧版 `/api/chat/.../completion/stream` 也已兼容。
+- **Claude 自动继续**只会在带明确提示文字的暂停横幅里点 Continue，且同一原因有冷却时间；不会乱点页面其他按钮。
+- **数据清理**：清除浏览器站点数据会一并清掉存档；重要内容请用面板「导出」备份。
+- **账号风险**：与上游 PreMod 一样，本工具仅是前端本地工具；请自行评估使用风险，遵守各平台服务条款。
 
-| 文件 | 说明 |
-|---|---|
-| `PreMod.user.js` | 多站点版 v3.0.0（推荐安装） |
-| `ChatGPT PreMod.user.js` | 上游 ChatGPT 原版 2.4.2（保留） |
-| `Simple Version.js` | 上游 Simple Version（保留） |
+## 建议的真实验证（约 10 分钟）
 
-## 上游与致谢
+对每个站点：正常提一个长问题 → 打开 F12 Console 看是否有 `[PreMod:站点]` 日志 → 若触发审核/中断，观察回复是否被保留、面板是否出现存档；把出问题的 **Console 截图 / 应用版本 / 触发时间** 发回来即可针对性修。
 
-- ChatGPT 部分：[horselock/ChatGPT-PreMod](https://github.com/horselock/ChatGPT-PreMod)（2.4.2，作者 horselock，原始思路来自 lugia19 / Brayn）
-- DeepSeek 防撤回机制参考：[G-124/DeepSeek-Anti--recall](https://github.com/G-124/DeepSeek-Anti--recall)、[xgsclzschdgs/deepseek-anti-recall-logger](https://github.com/xgsclzschdgs/deepseek-anti-recall-logger)
-- Claude Continue / 留痕参考：[LaneZero/claude-rekindle](https://github.com/LaneZero/claude-rekindle)、[oaustegard/claude-cache-extension](https://github.com/oaustegard/browser-extensions)
-- 千问 / 豆包 / Kimi 协议参考：WhyPilotXia/revQianWen、yixing233/GPTCraber、wangchuxiaoji-oss/doubao2api、cheaper-inference/OmniRoute 等（详见仓库内注释与调研报告）
+## 目录（工作区）
 
----
-
-<details>
-<summary>以下为上游 README（ChatGPT 原版说明，保留）</summary>
-
-https://www.horselock.us (see Old Reddit Posts, Jailbroken Erotica GPT for further information on red moderation)
-
-https://spicywriter.com - if you want to just write what you want, NSFW or otherwise, without worrying about nannying ;)
-
-Nov 4 update: Now prevents obnoxious "Help is available" moderation from removing the response. Banners can be toggled from your userscript manager's menu (e.g. the Tampermonkey/Violentmonkey toolbar icon) =)
-
-# PreMod
-Unofficial (obviously) userscript that hides moderation visual effects. _Prevents_ the deletion of streaming responses after they fully come in and saves them locally. With DeMod and similar, you lose them when you leave the page. But when you come back and load a convo, PreMod intercepts the convo load and puts those saved message back in where there would be removed blanks, tricking the UI into thinking nothing redded. Thanks to lugia19 for the idea of how to inject messages back in!
-
-**A note on terminology:** I call these moderation events **reds** (after the red warning the site throws up), used as both noun and verb - a message "reds", you get "a red". I deliberately avoid "blocked" and "flagged": both are hopelessly overloaded in AI land, and "blocked" is flat-out wrong for what happens - nothing stops the model from answering. It generates the full response; the site just hides it from you afterward. So throughout this README, a message that "reds" is simply one that moderation decided to hide.
-
-The current red moderation message is:
-
-> This content can’t be shown for safety reasons
-> Learn more about our intended model behavior in our Model Spec.
-
-**Note:** ChatGPT has started streaming some responses over a WebSocket ("stream handoff") rather than the old fetch stream - in my experience so far, around requests that red. The old fetch hook couldn't see that, so detection/saving of reds (both model responses and your own requests) had broken for those cases. 2.2.0 re-plumbs PreMod to hook the WebSocket too and restores it. In theory a double red (both your message AND the response red) is now salvageable too, since the response tokens still stream in full before the red verdict lands - though triggering one to prove it isn't worth the account risk.
-
-# Installation
-0. Ensure you do not have similar scripts/extensions installed (like CGPT "anti censorship" Chrome extension)
-1. Install a userscript manager:
-   - **Desktop (Chrome, Edge, Firefox, etc.):** ViolentMonkey is recommended and is now available for Chrome too. TamperMonkey also works, but it's proprietary.
-   - **Android:** use a browser that supports extensions (Firefox, Edge, etc.) and install ViolentMonkey.
-   - **iOS:** download Userscripts from the App Store and enable it in Safari (there may be a better way but this is the only one I know).
-2. **Chrome/Edge and other Chromium browsers:** allow the extension to run userscripts. Go to your extensions page (e.g. `chrome://extensions`), open the userscript manager's **Details**, and turn on **Allow User Scripts**. On older browser versions without that toggle, enable **Developer mode** on the extensions page instead. Firefox and Safari don't need this step.
-3. Go here and click install: https://github.com/horselock/ChatGPT-PreMod/raw/refs/heads/main/ChatGPT%20PreMod.user.js
-
-As of version 1.1.0, there will be visual feedback to show it's running:
-
-<img width="405" alt="image" src="https://github.com/user-attachments/assets/1ae944c2-c2e3-48ad-b6cd-6c86c7b0b5c8" />
-
-Tampermonkey/Violentmonkey icon will also typically have a number next to it to indicating how many scripts are active
-
-# How this works (IMPORTANT)
-- These have NOTHING to do with whether the model refuses or not. The red system only hides messages from YOU - that's it. How the model decides to respond depends entirely on the context. It doesnt even know anything was hidden.
-- Use CGPT as usual. Whenever a response finishes streaming, external moderation will scan it. If it reds, the website/app will attempt to remove the message. This script prevents that, and will save it to your ViolentMonkey extension's storage. Any time you load a conversation **on the same device/browser**, where the messages would have been blank, they will be there!
-- If your own request reds, the response stream will be interrupted immediately - it'll stop like a word in, if that. It will continue generating on the server though. When done, if the response doesn't red, it shows as expected. If it does red, the message simply will never show. **(Update: as of 2.2.0 this "double red" may no longer be a lost cause - the response now, in my experience, streams over a WebSocket that PreMod intercepts, and the tokens come down in full before the red verdict lands, so PreMod can save/restore them in at least some cases. See the transport note above.)** Historically no script could do anything about it. However, you can ask it to repeat the last response - an innocent request like "repeat that last reponse please" won't red. This includes going back to stuff that redded before you installed PreMod, so PreMod will be free to save the response.
-- Try to avoid your own requests redding - it can lead to bans. Too many reds in a row (some people say they've gotten it from just one) can lead to warning emails, and too many emails can lead to a ban. Exact numbers unknown (actually I've seen a recent report of a ban without warning email, though it did involve multiple request reds as expected). The categories that trigger this as `sexual/minors` and `self-harm/instructions`. The first category is VERY overly sensitive and prone to false positives, which is the only reason I'm writing this script. It can trip just from saying "young" or "girl" even, or mentions of family members, talking about personal trauma, etc. - even if you all caps insist that everyone's an adult, it's super dumb and might still go off. Just keep that in mind, and false positives on your requests will be a thing of the past.
-
-# Why doesn't DeMod work like it used to?
-DeMod at its peak basically walked right through red, it was like it did nothing. It worked so amazingly because the back end was still sending redded messages all the way to end users, basically with instructions for the front end to delete them. All they had to do was make a one-line code change to not send them, and that's probably all they did. It's shocking it took them until mid 2024 to fix it.
-
-So, we're left with this workaround of simply preventing the removal of redded messages and saving them locally (cloud storage is an option, I could implement if demand is high), and inserting them back in the chat when loading. There are limits, but this is actually almost back to full power. 
-
-Now the CGPT "anti censorship" extension also does prevents removal, but it's Chrome only and doesn't save/restore the messages. Other scrips are in a similar boat, and they break often just due to random changes they make to the site/app. I tried hard to keep my script simple and durable to change.
-
-# Mobile?
-Some mobile browsers like Firefox support extensions; you can install ViolentMonkey.
-
-# Misc notes
-If the main script breaks and you just need a quick fix (your messages NOT removed, but disappear when you leave the page), use the Simple Version.
-
-Like I said, I can enhance this with cloud storage if demand is high enough. Retrieve your conversations, any device, any browser!
-
-Official data export will still show deleted messages. It's GDPR mandated to have all your data, red or no. So nothing is ever truly lost, it's just not conveniently there for us to look at in their interface.
-
-As of May 2025, you can still have redded responses read aloud as long as you're using an extension like this to hide the red warning.
-
-# Changelog
-- 2.4.2 - Fixed responses not showing at all and the "Safety disclaimer bypassed" banner appearing on every turn. ChatGPT now sends replies marked hidden and reveals them with a later "remove" op, and PreMod was deleting that op. PreMod now only strips ops that hide a message, and un-hides replies that arrive already hidden.
-- 2.4.1 - No more reloading to get past ChatGPT's local cache. Chat URLs now get an empty ?messageId= on load and when switching chats, which makes ChatGPT load history from the server instead of its cache (where reds are already blanked), so restored reds show the first time. The reload and its menu toggle are gone. Saved reds are now read in one batch on convo load, which is faster for long chats. Also small fixes to the fallback script injection. Thanks to Brayn again.
-- 2.4.0 - Fixed saved reds not restoring on convo load: ChatGPT now also loads history in pages from /backend-api/conversations/<id>/messages, which PreMod didn't recognize. Saved text is now restored to any message we have it for, and its whole moderation verdict is removed (including verdicts for older messages on pages not loaded yet). ChatGPT can also keep an old block in its local cache and re-apply it over a restored message; if a restored red still shows the safety notice, PreMod reloads the chat once through a link that skips that cache. Turn that off with "Toggle reloading when a restored red stays hidden" in your userscript manager's menu. More reliable saving: stream events split across network chunks no longer lose text, text that streams after the verdict is saved too, and verdicts attached to non-moderation WebSocket events are cleared. The "saved it for you" banner now only shows once the save actually succeeded. Thanks to Brayn for tracking these down.
-- 2.3.0 - Fixed PreMod not loading at all while logged in: ChatGPT's Content Security Policy now blocks the blob: script PreMod injected. The page code is now injected via GM_addElement where available, falling back to reusing the page's script nonce (e.g. iOS Userscripts). Fixed saved reds not being restored on convo load: ChatGPT now loads conversations from /backend-api/conversations/ (plural). Clearer console logging (verbose level) on convo load: shows whether a red had no saved copy, had one but the message wasn't in the response, or was restored. Also: banner settings moved out of the script and into storage, so they survive updates. Toggle all banners, or just the "PreMod Active" startup banner, from your userscript manager's menu. Replaces the SHOW_BANNERS constant. Startup banner toggle idea from sn-o-w (#1).
-- 2.2.0 - Re-plumbed for ChatGPT's new WebSocket "stream handoff" transport (seen so far around requests that red). Moderation detection and saving (redded responses and redded requests alike) had broken when that streaming moved off the fetch stream onto a WebSocket; PreMod now hooks the WebSocket too. Double reds are now theoretically salvageable. Also: on convo load, don't clear the red on a message we have no saved copy of (it was breaking scrolling).
-- 2.1.2 - Updated disclaimer filtering for the new moderation stream format (handles visibility-hide ops within delta arrays; now strips all safety disclaimers from convo history, not just "Help is available").
-- 2.1.1 - Fixed red message detection broken in 2.1.0. Popup now shows and messages are saved properly again.
-- 2.1.0 - Added filtering for "Help is available" moderation removal. Added SHOW_BANNERS toggle. Added additional console debugging.
-- 2.0.0 - iOS Safari support. People who previewed the 2.0.0-SNAPSHOT version, be warned that it used localStorage, which was a temporary workaround - messages saved won't be avaiable after upgrading. You can always look at your own localStrorage and save it.
-
-
-</details>
+- `premod/src/`：多站点引擎、DeepSeek/Claude 纯逻辑核心、ChatGPT 原代码
+- `premod/build.mjs`：组装脚本（`node premod/build.mjs`）
+- `premod/dist/PreMod.user.js`：构建产物（与 Downloads 里的文件一致）
+- `premod/test/`：Node 单元/集成测试（`node premod/test/*.test.*`）
+- `research/domestic-sites.md`：国内站点机制调研报告（含证据链接与实测清单）
