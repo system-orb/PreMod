@@ -1,3 +1,58 @@
+# PreMod 多站点版 · Multi-site PreMod
+
+> Fork of [horselock/ChatGPT-PreMod](https://github.com/horselock/ChatGPT-PreMod). The ChatGPT part is **unchanged 2.4.2**; this fork adds adapters for DeepSeek / Claude / 千问(通义) / 豆包 / Kimi, and a local reply archive panel.
+
+**安装 / Install：** [点击安装 PreMod.user.js](https://github.com/system-orb/PreMod/raw/main/PreMod.user.js)（Tampermonkey / Violentmonkey）
+
+```text
+https://github.com/system-orb/PreMod/raw/main/PreMod.user.js
+```
+
+## 各站点功能
+
+| 站点 | 功能 |
+|---|---|
+| **ChatGPT**（chatgpt.com / chat.openai.com） | 原版 ChatGPT PreMod 2.4.2 全部功能：隐藏审核视觉提示、阻止被删回复、本地保存并在历史里恢复（代码逐字未改） |
+| **DeepSeek**（chat.deepseek.com） | 拦截「撤回/替换」：被 `CONTENT_FILTER` 命中的回复不再消失，正文保留并加提示；正常回复自动备份；重开对话自动恢复被拦截消息 |
+| **Claude**（claude.ai） | 自动点 Continue（"This response ended early / Paused"）；旁路捕获每条回复存档；发现回复在会话里消失时提示并提供找回 |
+| **千问 / 通义**（qianwen.com / tongyi.com） | 整段快照式 SSE：新快照不再包含已显示文本时保存旧版；`error_code` 提示 |
+| **豆包**（doubao.com） | 解析 SSE 事件块累积正文；识别 `STREAM_ERROR` 与风控码 `710022002 / 710022004` |
+| **Kimi**（kimi.com） | 解析 Connect-RPC 二进制帧流；`op=set` 覆盖已有文本时保存旧版 |
+| 其他站点 | 通用旁路留痕 + 右下角「PreMod」存档面板（复制 / 导出 / 清空） |
+
+## 使用
+
+- 正常使用各 AI 网站即可。DeepSeek 无需额外操作；Claude 自动继续生效时页面顶部会出现提示条。
+- Claude / 千问 / 豆包 / Kimi 等站点右下角有「PreMod」悬浮按钮，点开可查看本地存档（每条可复制、删除，可导出 JSON、清空）。
+- Tampermonkey 菜单（点扩展图标 → PreMod）可开关：横幅、DeepSeek 防撤回、Claude 自动继续、本地留痕、打开存档面板。
+
+## 限制（诚实说明）
+
+- **无法绕过服务端审核**：只能保住「服务器已经发到浏览器的内容」以及被覆盖前的旧内容留档。
+- 国内站点的网页端「审核提示原文 / 是否先显示后被替换」目前没有公开实证，接口按 2026 年公开逆向资料实现，站点改版可能失效；失效时通常表现为面板无新记录或 Console 出现 `[PreMod:...]` 报错。
+- 存档只保存在本浏览器 `localStorage`，清除站点数据会丢失，重要内容请用面板「导出」。
+- 请遵守各平台服务条款，自行评估使用风险。
+
+## 文件
+
+| 文件 | 说明 |
+|---|---|
+| `PreMod.user.js` | 多站点版 v3.0.0（推荐安装） |
+| `ChatGPT PreMod.user.js` | 上游 ChatGPT 原版 2.4.2（保留） |
+| `Simple Version.js` | 上游 Simple Version（保留） |
+
+## 上游与致谢
+
+- ChatGPT 部分：[horselock/ChatGPT-PreMod](https://github.com/horselock/ChatGPT-PreMod)（2.4.2，作者 horselock，原始思路来自 lugia19 / Brayn）
+- DeepSeek 防撤回机制参考：[G-124/DeepSeek-Anti--recall](https://github.com/G-124/DeepSeek-Anti--recall)、[xgsclzschdgs/deepseek-anti-recall-logger](https://github.com/xgsclzschdgs/deepseek-anti-recall-logger)
+- Claude Continue / 留痕参考：[LaneZero/claude-rekindle](https://github.com/LaneZero/claude-rekindle)、[oaustegard/claude-cache-extension](https://github.com/oaustegard/browser-extensions)
+- 千问 / 豆包 / Kimi 协议参考：WhyPilotXia/revQianWen、yixing233/GPTCraber、wangchuxiaoji-oss/doubao2api、cheaper-inference/OmniRoute 等（详见仓库内注释与调研报告）
+
+---
+
+<details>
+<summary>以下为上游 README（ChatGPT 原版说明，保留）</summary>
+
 https://www.horselock.us (see Old Reddit Posts, Jailbroken Erotica GPT for further information on red moderation)
 
 https://spicywriter.com - if you want to just write what you want, NSFW or otherwise, without worrying about nannying ;)
@@ -66,3 +121,6 @@ As of May 2025, you can still have redded responses read aloud as long as you're
 - 2.1.1 - Fixed red message detection broken in 2.1.0. Popup now shows and messages are saved properly again.
 - 2.1.0 - Added filtering for "Help is available" moderation removal. Added SHOW_BANNERS toggle. Added additional console debugging.
 - 2.0.0 - iOS Safari support. People who previewed the 2.0.0-SNAPSHOT version, be warned that it used localStorage, which was a temporary workaround - messages saved won't be avaiable after upgrading. You can always look at your own localStrorage and save it.
+
+
+</details>
